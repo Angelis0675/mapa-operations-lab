@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <base href="/" />
+        <title>MAPA Operations Lab | C# + mapas interactivos</title>
+        <meta
+            name="description"
+            content="Portafolio de ingeniería: mapa interactivo, incidentes, asignación de unidades y bitácora con C# y Blazor WebAssembly. Datos simulados, sin backend."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="MAPA Operations Lab — del reporte al cierre" />
+        <meta
+            property="og:description"
+            content="Prueba una demo geoespacial con C#, Blazor y Leaflet. Registra un incidente, asigna una unidad y completa el seguimiento. Sin cuenta ni instalación."
+        />
+        <meta property="og:image" content="social-preview.png" />
+        <meta name="theme-color" content="#0b1220" />
+        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+        <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+        <link rel="stylesheet" href="css/demo-base.css" />
+        <link rel="stylesheet" href="css/portfolio.css" />
+        <link rel="stylesheet" href="Mapa.Portfolio.styles.css" />
+        <style>
+            .boot {
+                min-height: 100vh;
+                display: grid;
+                place-content: center;
+                text-align: center;
+                gap: 12px;
+            }
+            .boot b {
+                font-size: 26px;
+                letter-spacing: 3px;
+                color: #63e1c4;
+            }
+            .boot span {
+                font-size: 13px;
+                color: #94a7c1;
+            }
+            .boot small {
+                color: #7187a4;
+                font-size: 11px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <div class="boot">
+                <b>MAPA / OPERATIONS LAB</b><span>Cargando la demo en tu navegador…</span
+                ><small>La primera carga descarga el entorno .NET WebAssembly.</small>
+            </div>
+        </div>
+        <div id="blazor-error-ui">
+            No se pudo completar la operación. <a href="">Recargar demo</a>
+        </div>
+        <script src="vendor/leaflet/leaflet.js"></script>
+        <script src="js/demo.js"></script>
+        <script src="_framework/blazor.webassembly.js"></script>
+    </body>
+</html>
