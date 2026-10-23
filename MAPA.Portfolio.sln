@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6C79E53C-7072-47FF-8226-700CD6A5A67C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mapa.Portfolio", "src\Mapa.Portfolio\Mapa.Portfolio.csproj", "{851DE9E8-A5A2-4782-AE83-7DBA3BF46EE2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F397E80C-6E83-4651-9A63-D75C8CEAEB57}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mapa.Checks", "tests\Mapa.Checks\Mapa.Checks.csproj", "{E8615D90-EF70-4E2E-AB73-C766B07F580A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{851DE9E8-A5A2-4782-AE83-7DBA3BF46EE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{851DE9E8-A5A2-4782-AE83-7DBA3BF46EE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{851DE9E8-A5A2-4782-AE83-7DBA3BF46EE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{851DE9E8-A5A2-4782-AE83-7DBA3BF46EE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8615D90-EF70-4E2E-AB73-C766B07F580A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8615D90-EF70-4E2E-AB73-C766B07F580A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8615D90-EF70-4E2E-AB73-C766B07F580A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8615D90-EF70-4E2E-AB73-C766B07F580A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{851DE9E8-A5A2-4782-AE83-7DBA3BF46EE2} = {6C79E53C-7072-47FF-8226-700CD6A5A67C}
+		{E8615D90-EF70-4E2E-AB73-C766B07F580A} = {F397E80C-6E83-4651-9A63-D75C8CEAEB57}
+	EndGlobalSection
+EndGlobal
