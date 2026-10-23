@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="../../src/Mapa.Portfolio/Services/DemoStore.cs" Link="DemoStore.cs" />
+        <Compile Include="../../src/Mapa.Portfolio/Services/DemoJsonContext.cs" Link="DemoJsonContext.cs" />
+    </ItemGroup>
+</Project>
