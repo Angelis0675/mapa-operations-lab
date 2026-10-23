@@ -1,0 +1,11 @@
+{
+    "profiles": {
+        "Mapa.Portfolio": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "applicationUrl": "http://localhost:5192",
+            "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}",
+            "environmentVariables": { "ASPNETCORE_ENVIRONMENT": "Development" }
+        }
+    }
+}
