@@ -1,0 +1,63 @@
+name: Validate and publish demo
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Check domain rules
+        run: dotnet run --project tests/Mapa.Checks/Mapa.Checks.csproj -c Release
+      - name: Publish browser application
+        run: dotnet publish src/Mapa.Portfolio/Mapa.Portfolio.csproj -c Release -o artifacts/site --nologo
+      - name: Configure repository base path
+        shell: bash
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          owner, repo = os.environ['REPOSITORY'].split('/')
+          base = '/' if repo.lower() == f'{owner.lower()}.github.io' else f'/{repo}/'
+          index = Path('artifacts/site/wwwroot/index.html')
+          html = index.read_text().replace('<base href="/"', f'<base href="{base}"')
+          html = html.replace('content="social-preview.png"', f'content="https://{owner}.github.io{base}social-preview.png"')
+          index.write_text(html)
+          Path('artifacts/site/wwwroot/.nojekyll').touch()
+          PY
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts/site/wwwroot
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
