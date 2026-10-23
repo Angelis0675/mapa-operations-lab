@@ -1,0 +1,53 @@
+* {
+    box-sizing: border-box;
+}
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family:
+        Segoe UI,
+        Arial,
+        sans-serif;
+    background: #0b1220;
+    color: #e2e8f0;
+}
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+h1:focus {
+    outline: none;
+}
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    padding: 18px;
+    background: #652f3c;
+    color: #fff;
+}
+#blazor-error-ui a {
+    color: #fff;
+}
+.leaflet-container {
+    font-family:
+        Segoe UI,
+        Arial,
+        sans-serif;
+}
+.leaflet-popup-content {
+    color: #172538;
+}
+.leaflet-control-attribution {
+    font-size: 9px !important;
+}
+.leaflet-tooltip {
+    max-width: 300px;
+    white-space: normal;
+}
