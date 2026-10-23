@@ -1,0 +1,880 @@
+@page "/"
+@using Mapa.Portfolio.Services
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
+@inject IJSRuntime JS
+@layout Mapa.Portfolio.Layout.DemoLayout
+@implements IAsyncDisposable
+
+<div class="demo-shell">
+    <aside class="rail">
+        <div class="brand">
+            <span class="brand-mark">M</span>
+            <div>
+                MAPA 
+                <small>OPERATIONS LAB</small>
+            </div>
+        </div>
+        <div class="section-label">ESPACIO DE TRABAJO</div>
+        @foreach (var tab in tabs)
+        {
+            <button
+                class="nav-item @(view == tab ? "active" : "")"
+                title="@tab"
+                aria-label="@tab"
+                @onclick="() => SetView(tab)">
+                <span aria-hidden="true">@Icon(tab)</span>
+                @tab
+            </button>
+        }
+        <div class="rail-footer">
+            <span class="live-dot"></span>
+            Datos de demostración
+            <br />
+            <small>Sin servicios operativos externos</small>
+            <hr />
+            Operador local
+            <br />
+            <small>Sesión de prueba · sin contraseña</small>
+        </div>
+    </aside>
+    <main>
+        <header>
+            <div>
+                <div class="eyebrow">PORTAFOLIO DE INGENIERÍA · DATOS SIMULADOS</div>
+                <h1>@view</h1>
+            </div>
+            <div class="header-actions">
+                <span class="demo-badge">100% EN TU NAVEGADOR</span>
+                <button class="primary" disabled="@(!ready)" @onclick="OpenCreate">
+                    + Registrar incidente
+                </button>
+            </div>
+        </header>
+        @if (view == "Panorama")
+        {
+            <section class="portfolio-intro">
+                <div>
+                    <span class="intro-kicker">GEOSPATIAL OPERATIONS</span>
+                    <h2>
+                        Del reporte al cierre,
+                        <br />
+                        todo en un mismo mapa.
+                    </h2>
+                    <p>
+                        Una demostración interactiva de coordinación de incidentes: reglas de asignación, bitácora y cartografía, con C# ejecutándose en el navegador.
+                    </p>
+                    <div class="tech-tags">
+                        <span>C# / .NET 8</span>
+                        <span>Blazor WebAssembly</span>
+                        <span>Leaflet</span>
+                        <span>Local-first</span>
+                    </div>
+                </div>
+                <div class="intro-action">
+                    <span class="intro-step">PRUÉBALO EN 2 MINUTOS</span>
+                    <p>
+                        Registra un caso, asigna una unidad
+                        <br />
+                        y completa su seguimiento.
+                    </p>
+                    <button @onclick='() => SetView("Proyecto")'>Explorar la arquitectura ↗</button>
+                </div>
+            </section>
+        }
+        @if (!ready)
+        {
+            <div class="notice">Cargando datos locales…</div>
+        }
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="notice" role="status">
+                @message 
+                <button @onclick="() => message = null" aria-label="Cerrar aviso">×</button>
+            </div>
+        }
+        <section class="metrics">
+            <div>
+                <small>INCIDENTES ACTIVOS</small>
+                <strong>@store.State.Incidents.Count(i => i.Status != "Cerrado")</strong>
+                <span>Pendientes de resolución</span>
+            </div>
+            <div>
+                <small>PRIORIDAD ALTA</small>
+                <strong class="coral">
+                    @store.State.Incidents.Count(i => i.Priority == "Alta" && i.Status != "Cerrado")
+                </strong>
+                <span>Dentro de la simulación</span>
+            </div>
+            <div>
+                <small>UNIDADES DISPONIBLES</small>
+                <strong class="mint">
+                    @store.State.Units.Count(u => store.Available(u.Id))
+                    <em>/ @store.State.Units.Count</em>
+                </strong>
+                <span>Asignación exclusivamente local</span>
+            </div>
+            <div>
+                <small>INCIDENTES CERRADOS</small>
+                <strong>@store.State.Incidents.Count(i => i.Status == "Cerrado")</strong>
+                <span>Con bitácora de seguimiento</span>
+            </div>
+        </section>
+        @if (view == "Panorama" || view == "Despacho")
+        {
+            <section class="workspace">
+                <div class="map-card">
+                    <div class="card-head">
+                        <div>
+                            <h2>Mapa de operaciones</h2>
+                            <small>Posiciones ficticias · SLP</small>
+                        </div>
+                        <button @onclick="CenterMap">Centrar</button>
+                    </div>
+                    <div class="map-toolbar">
+                        <label>
+                            <input type="checkbox" @bind="showUnits" @bind:after="RefreshMap" />
+                            Unidades
+                        </label>
+                        <label>
+                            <input type="checkbox" @bind="showCameras" @bind:after="RefreshMap" />
+                            Cámaras
+                        </label>
+                        <label>
+                            <input type="checkbox" @bind="showClosed" @bind:after="RefreshMap" />
+                            Cerrados
+                        </label>
+                        <label>
+                            <input type="checkbox" @bind="baseMap" @bind:after="RefreshMap" />
+                            Mapa base en línea
+                        </label>
+                    </div>
+                    <div class="demo-map" @ref="mapElement"></div>
+                    <div class="map-foot">
+                        ● Incidentes &nbsp; ◆ Unidades &nbsp; ■ Cámaras 
+                        <span>Sin mapa base: cuadrícula local. Haz clic en un marcador para consultar.</span>
+                    </div>
+                </div>
+                <div class="queue card">
+                    <div class="card-head">
+                        <h2>Cola de atención</h2>
+                        <span class="count">@Filtered.Count()</span>
+                    </div>
+                    <input
+                        class="search"
+                        placeholder="Buscar folio, tipo o ubicación"
+                        aria-label="Buscar incidentes"
+                        @bind="search"
+                        @bind:event="oninput"/>
+                    <select aria-label="Filtrar estado" @bind="statusFilter">
+                        <option value="">Todos los estados</option>
+                        @foreach (var status in DemoStore.Statuses)
+                        {
+                            <option>@status</option>
+                        }
+                    </select>
+                    <div class="queue-list">
+                        @foreach (var item in Filtered)
+                        {
+                            <button
+                                class="incident-row @(selectedId == item.Id ? "selected" : "")"
+                                @onclick="() => Select(item.Id)">
+                                <div>
+                                    <span class="folio">SIM-@item.Id</span>
+                                    <span class="priority @item.Priority">@item.Priority</span>
+                                </div>
+                                <strong>@item.Title</strong>
+                                <small>@item.Address</small>
+                                <div>
+                                    <span class="status">@item.Status</span>
+                                    <small>@(item.UnitId ?? "Sin asignar")</small>
+                                </div>
+                            </button>
+                        }
+                        @if (!Filtered.Any())
+                        {
+                            <p class="empty">No hay incidentes con ese filtro.</p>
+                        }
+                    </div>
+                </div>
+            </section>
+            @if (Selected is { } current)
+            {
+                <section class="detail card">
+                    <div class="card-head">
+                        <div>
+                            <small>
+                                SIM-@current.Id · @current.Created.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            </small>
+                            <h2>@current.Title</h2>
+                        </div>
+                        <span class="priority @current.Priority">@current.Priority · @current.Status</span>
+                    </div>
+                    <div class="detail-grid">
+                        <div>
+                            <p>@current.Description</p>
+                            <p class="muted">
+                                @current.Address · @current.Lat.ToString("F5", CultureInfo.InvariantCulture), @current.Lng.ToString("F5", CultureInfo.InvariantCulture)
+                            </p>
+                            <label class="field-label">Preguntas de orientación</label>
+                            @foreach (var q in Questions(current.Category))
+                            {
+                                <div class="question">• @q</div>
+                            }
+                            @if (current.Status != "Cerrado")
+                            {
+                                <div class="dispatch-actions">
+                                    <select aria-label="Unidad para asignar" @bind="unitId">
+                                        <option value="">Selecciona una unidad disponible</option>
+                                        @foreach (var unit in store.State.Units.Where(u => store.Available(u.Id) || current.UnitId == u.Id))
+                                        {
+                                            <option value="@unit.Id">@unit.Id · @unit.Specialty</option>
+                                        }
+                                    </select>
+                                    <button
+                                        disabled="@(current.Status == "En sitio" || string.IsNullOrEmpty(unitId))"
+                                        @onclick="Assign">
+                                        Asignar unidad
+                                    </button>
+                                </div>
+                            }
+                            <textarea aria-label="Nota de seguimiento" placeholder="Escribe una nota de seguimiento o resolución…" maxlength="1000" @bind="note" @bind:event="oninput"></textarea>
+                            <div class="action-row">
+                                <button disabled="@(string.IsNullOrWhiteSpace(note))" @onclick="AddNote">
+                                    Agregar nota
+                                </button>
+                                @if (current.Status == "Asignado")
+                                {
+                                    <button
+                                        disabled="@(string.IsNullOrWhiteSpace(note))"
+                                        @onclick='() => Advance("En sitio")'>
+                                        Confirmar llegada simulada
+                                    </button>
+                                }
+                                @if (current.Status != "Cerrado")
+                                {
+                                    <button
+                                        class="primary"
+                                        disabled="@(string.IsNullOrWhiteSpace(note))"
+                                        @onclick='() => Advance("Cerrado")'>
+                                        Cerrar incidente
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        <div class="timeline">
+                            <label class="field-label">BITÁCORA LOCAL</label>
+                            @foreach (var entry in current.History.AsEnumerable().Reverse())
+                            {
+                                <div>
+                                    <small>@entry.At.ToLocalTime().ToString("dd/MM HH:mm")</small>
+                                    <p>@entry.Text</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </section>
+            }
+        }
+        else if (view == "Incidentes")
+        {
+            <section class="card table-card">
+                <div class="card-head">
+                    <h2>Registro de incidentes</h2>
+                    <input
+                        class="search"
+                        aria-label="Buscar en registro"
+                        placeholder="Buscar…"
+                        @bind="search"
+                        @bind:event="oninput"/>
+                    <select aria-label="Estado en registro" @bind="statusFilter">
+                        <option value="">Todos los estados</option>
+                        @foreach (var s in DemoStore.Statuses)
+                        {
+                            <option>@s</option>
+                        }
+                    </select>
+                </div>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Folio</th>
+                                <th>Incidente</th>
+                                <th>Prioridad</th>
+                                <th>Estado</th>
+                                <th>Unidad</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var i in Filtered)
+                            {
+                                <tr>
+                                    <td>SIM-@i.Id</td>
+                                    <td>
+                                        <strong>@i.Title</strong>
+                                        <small>@i.Address</small>
+                                    </td>
+                                    <td>
+                                        <span class="priority @i.Priority">@i.Priority</span>
+                                    </td>
+                                    <td>@i.Status</td>
+                                    <td>@(i.UnitId ?? "—")</td>
+                                    <td>
+                                        <button @onclick="() => OpenDispatch(i.Id)">Ver seguimiento →</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (!Filtered.Any())
+                    {
+                        <p class="empty">No hay resultados.</p>
+                    }
+                </div>
+            </section>
+        }
+        else if (view == "Recursos")
+        {
+            <h2>Unidades simuladas</h2>
+            <section class="resource-grid">
+                @foreach (var u in store.State.Units)
+                {
+                    <div class="card resource">
+                        <span class="resource-icon">◆</span>
+                        <h3>@u.Id</h3>
+                        <p>@u.Specialty</p>
+                        <span class="status">@(store.Available(u.Id) ? "Disponible" : "Asignada")</span>
+                        @if (store.State.Incidents.FirstOrDefault(i => i.UnitId == u.Id && i.Status != "Cerrado") is {} assigned)
+                        {
+                            <button @onclick="() => OpenDispatch(assigned.Id)">Ver SIM-@assigned.Id</button>
+                        }
+                    </div>
+                }
+            </section>
+            <h2 class="space-top">Cámaras simuladas</h2>
+            <section class="resource-grid">
+                @foreach (var c in store.State.Cameras)
+                {
+                    <div class="card resource">
+                        <span class="resource-icon">▣</span>
+                        <h3>@c.Id</h3>
+                        <p>@c.Location</p>
+                        <span class="status">
+                            @(c.Online ? "Simulador disponible" : "Sin señal simulada")
+                        </span>
+                        <button @onclick="() => camera = c">Abrir simulador</button>
+                    </div>
+                }
+            </section>
+        }
+        else if (view == "Catálogo")
+        {
+            <section class="card">
+                <div class="card-head">
+                    <div>
+                        <h2>Tipos de incidente</h2>
+                        <small>Edita prioridad y preguntas de orientación. Se guardan en este equipo.</small>
+                    </div>
+                </div>
+                @foreach (var category in store.State.Categories)
+                {
+                    <div class="catalog-row">
+                        <h3>@category.Name</h3>
+                        <select aria-label="@($"Prioridad de {category.Name}")" @bind="category.Priority">
+                            @foreach (var priority in DemoStore.Priorities)
+                            {
+                                <option>@priority</option>
+                            }
+                        </select>
+                        <textarea aria-label="@($"Preguntas de {category.Name}")" @bind="category.Questions" @bind:event="oninput" maxlength="2000"></textarea>
+                    </div>
+                }
+                <div class="card-pad">
+                    <button class="primary" @onclick="SaveCatalog">Guardar catálogo</button>
+                </div>
+            </section>
+        }
+        else if (view == "Proyecto")
+        {
+            <section class="card project-about">
+                <span class="intro-kicker">DECISIONES DE INGENIERÍA</span>
+                <h2>Una demo pequeña, con reglas reales.</h2>
+                <p>
+                    MAPA Operations Lab explora cómo convertir reportes georreferenciados en un flujo de atención trazable. Todos los incidentes, recursos y posiciones son ficticios. El caso de estudio está ambientado en San Luis Potosí, sin afiliación institucional.
+                </p>
+                <div class="architecture">
+                    <div>
+                        <b>01 / Interfaz</b>
+                        <p>Componentes Razor, estados de formulario, indicadores y diseño adaptable.</p>
+                    </div>
+                    <span>→</span>
+                    <div>
+                        <b>02 / Dominio</b>
+                        <p>
+                            DemoStore valida el registro, las asignaciones y las transiciones. La unidad se libera al cerrar el incidente.
+                        </p>
+                    </div>
+                    <span>→</span>
+                    <div>
+                        <b>03 / Integración local</b>
+                        <p>
+                            JS interop conecta Leaflet y localStorage. El núcleo de reglas no depende del navegador.
+                        </p>
+                    </div>
+                </div>
+                <h3>Lo que puedes comprobar</h3>
+                <ul>
+                    <li>Una unidad ocupada no puede atender dos incidentes abiertos.</li>
+                    <li>La llegada requiere una asignación; el cierre requiere una nota.</li>
+                    <li>La bitácora y los cambios sobreviven a una recarga.</li>
+                    <li>Un respaldo inválido se rechaza sin reemplazar el estado actual.</li>
+                    <li>La cuadrícula sigue disponible sin un proveedor de mapas.</li>
+                </ul>
+                <h3>Alcance y decisiones</h3>
+                <p>
+                    Se eligió WebAssembly para publicar archivos estáticos en GitHub Pages sin servidor ni secretos. El guardado es por navegador, no una base de datos compartida. Las coordenadas son editables y las líneas son vínculos de asignación, no rutas calculadas. Las cámaras muestran un patrón de prueba.
+                </p>
+                <h3>Una siguiente iteración</h3>
+                <p>
+                    Para un producto multiusuario: autenticación, API propia, base de datos, concurrencia de asignaciones y auditoría en servidor. Estas funciones no se presentan como implementadas en esta demo.
+                </p>
+                <div class="action-row">
+                    <button class="primary" @onclick='() => SetView("Panorama")'>Volver al mapa</button>
+                </div>
+            </section>
+        }
+        else
+        {
+            <section class="card settings">
+                <h2>Datos y configuración</h2>
+                <p>
+                    Esta demo trabaja con incidentes, recursos y ubicaciones ficticias. No envía despachos, llamadas ni mensajes y no consulta servicios operativos externos.
+                </p>
+                <h3>Guardado local</h3>
+                <p>
+                    Los cambios se guardan automáticamente en este navegador. Exporta un respaldo para trasladarlos a otro equipo.
+                </p>
+                <button @onclick="Export">Exportar respaldo JSON</button>
+                <label class="file-label">
+                    Restaurar respaldo
+                    <InputFile OnChange="Import" accept=".json,application/json" />
+                </label>
+                <h3>Escenario inicial</h3>
+                <p>Reiniciar reemplaza los registros locales por los escenarios de ejemplo.</p>
+                <button class="danger" @onclick="() => confirmReset = true">Reiniciar demostración</button>
+                <h3>Mapa</h3>
+                <p>
+                    La cuadrícula funciona sin internet después de cargar la aplicación. Activa «Mapa base en línea» para consultar cartografía de OpenStreetMap; los datos operativos permanecen locales. Las cámaras muestran un patrón generado, sin video real.
+                </p>
+            </section>
+        }
+        <footer>
+            MAPA / DEMO LOCAL 
+            <span>@saveStatus</span>
+        </footer>
+    </main>
+</div>
+@if (creating)
+{
+    <div class="modal-backdrop-demo">
+        <section class="modal-demo" role="dialog" aria-modal="true" aria-labelledby="create-title">
+            <div class="card-head">
+                <div>
+                    <small>NUEVO REGISTRO SIMULADO</small>
+                    <h2 id="create-title">Registrar incidente</h2>
+                </div>
+                <button @onclick="() => creating = false" aria-label="Cerrar registro">×</button>
+            </div>
+            <div class="form-grid">
+                <label>
+                    Título
+                    <input maxlength="120" @bind="title" @bind:event="oninput" />
+                </label>
+                <label>
+                    Tipo
+                    <select @bind="categoryName" @bind:after="CategoryChanged">
+                        @foreach (var c in store.State.Categories)
+                        {
+                            <option>@c.Name</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    Prioridad
+                    <select @bind="priority">
+                        @foreach (var p in DemoStore.Priorities)
+                        {
+                            <option>@p</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    Ubicación / referencia
+                    <input maxlength="200" @bind="address" @bind:event="oninput" />
+                </label>
+                <label>
+                    Latitud
+                    <InputNumber @bind-Value="lat" />
+                </label>
+                <label>
+                    Longitud
+                    <InputNumber @bind-Value="lng" />
+                </label>
+                <label class="wide">
+                    Descripción
+                    <textarea maxlength="2000" @bind="description" @bind:event="oninput"></textarea>
+                </label>
+            </div>
+            <p class="muted">
+                Posición inicial: centro de SLP. Modifica las coordenadas para ubicar el incidente.
+            </p>
+            @if (formError != null)
+            {
+                <p class="form-error" role="alert">@formError</p>
+            }
+            <div class="action-row">
+                <button @onclick="() => creating = false">Cancelar</button>
+                <button class="primary" @onclick="Create">Guardar incidente</button>
+            </div>
+        </section>
+    </div>
+}
+@if (camera != null)
+{
+    <div class="modal-backdrop-demo">
+        <section class="modal-demo" role="dialog" aria-modal="true" aria-label="Simulador de cámara">
+            <div class="card-head">
+                <div>
+                    <small>SIMULACIÓN · SIN VIDEO REAL</small>
+                    <h2>@camera.Id</h2>
+                </div>
+                <button @onclick="() => camera = null" aria-label="Cerrar cámara">×</button>
+            </div>
+            <div class="camera-simulator">
+                <span>@(camera.Online ? "PATRÓN DE PRUEBA" : "SIN SEÑAL SIMULADA")</span>
+            </div>
+            <p>@camera.Location</p>
+            <p class="muted">Esta imagen es un patrón generado para probar la interfaz.</p>
+        </section>
+    </div>
+}
+@if (confirmReset)
+{
+    <div class="modal-backdrop-demo">
+        <section class="modal-demo compact" role="dialog" aria-modal="true" aria-label="Confirmar reinicio">
+            <h2>¿Reiniciar la demo?</h2>
+            <p>Se reemplazarán los datos locales. Puedes cancelar y exportar un respaldo antes.</p>
+            <div class="action-row">
+                <button @onclick="() => confirmReset = false">Cancelar</button>
+                <button class="danger" @onclick="Reset">Reiniciar datos</button>
+            </div>
+        </section>
+    </div>
+}
+
+@code
+{
+    readonly DemoStore store = new();
+    readonly string[] tabs =
+    {
+        "Panorama",
+        "Despacho",
+        "Incidentes",
+        "Recursos",
+        "Catálogo",
+        "Proyecto",
+        "Configuración",
+    };
+    string view = "Panorama",
+        search = "",
+        statusFilter = "",
+        unitId = "",
+        note = "",
+        saveStatus = "Sin cambios";
+    string title = "",
+        categoryName = "Accidente vial",
+        priority = "Alta",
+        address = "",
+        description = "";
+    string? message,
+        formError;
+    double lat = 22.1565,
+        lng = -100.9855;
+    bool ready,
+        creating,
+        confirmReset,
+        mapReady,
+        showUnits = true,
+        showCameras = true,
+        showClosed,
+        baseMap;
+    int selectedId = 1003;
+    DemoCamera? camera;
+    ElementReference mapElement;
+    DotNetObjectReference<Demo>? callback;
+    DemoIncident? Selected => store.State.Incidents.FirstOrDefault(i => i.Id == selectedId);
+    IEnumerable<DemoIncident> Filtered =>
+        store
+            .State.Incidents.Where(i =>
+                (statusFilter == "" || i.Status == statusFilter)
+                && (
+                    $"SIM-{i.Id} {i.Title} {i.Address} {i.Category}".Contains(
+                        search,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+            )
+            .OrderBy(i => i.Status == "Cerrado")
+            .ThenBy(i => Array.IndexOf(DemoStore.Priorities, i.Priority))
+            .ThenByDescending(i => i.Id);
+
+    IEnumerable<string> Questions(string category) =>
+        (store.State.Categories.FirstOrDefault(c => c.Name == category)?.Questions ?? "").Split(
+            '\n',
+            StringSplitOptions.RemoveEmptyEntries
+        );
+
+    string Icon(string tab) =>
+        tab switch
+        {
+            "Panorama" => "◈",
+            "Despacho" => "↗",
+            "Incidentes" => "≡",
+            "Recursos" => "▣",
+            "Catálogo" => "▤",
+            "Proyecto" => "⌘",
+            _ => "⚙",
+        };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            callback = DotNetObjectReference.Create(this);
+            try
+            {
+                var json = await JS.InvokeAsync<string?>("demoStorage.load");
+                if (json != null)
+                    store.Restore(json);
+                saveStatus =
+                    json == null ? "Escenario de ejemplo cargado" : "Datos locales recuperados";
+            }
+            catch
+            {
+                message =
+                    "No se pudo leer el guardado anterior. Se muestra el escenario inicial; exporta un respaldo antes de modificarlo.";
+                saveStatus = "Guardado anterior no disponible";
+            }
+            ready = true;
+            StateHasChanged();
+        }
+        if (ready && !mapReady && (view == "Panorama" || view == "Despacho"))
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("demoMap.init", mapElement, callback);
+                mapReady = true;
+                await RefreshMap();
+            }
+            catch
+            {
+                message =
+                    "El mapa no pudo iniciarse. Puedes registrar y gestionar incidentes desde las otras secciones.";
+            }
+        }
+    }
+
+    async Task SetView(string tab)
+    {
+        if (mapReady)
+            await JS.InvokeVoidAsync("demoMap.dispose");
+        mapReady = false;
+        view = tab;
+        search = "";
+        statusFilter = "";
+        await JS.InvokeVoidAsync("demoUi.scrollToTop");
+    }
+
+    async Task RefreshMap()
+    {
+        if (mapReady)
+            await JS.InvokeVoidAsync(
+                "demoMap.render",
+                store.State,
+                showUnits,
+                showCameras,
+                showClosed,
+                baseMap,
+                selectedId
+            );
+    }
+
+    async Task CenterMap()
+    {
+        if (mapReady)
+            await JS.InvokeVoidAsync("demoMap.center");
+    }
+
+    async Task Select(int id)
+    {
+        selectedId = id;
+        unitId = Selected?.UnitId ?? "";
+        note = "";
+        await RefreshMap();
+    }
+
+    [JSInvokable]
+    public async Task SelectIncident(int id)
+    {
+        await Select(id);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task SelectCamera(string id)
+    {
+        camera = store.State.Cameras.FirstOrDefault(c => c.Id == id);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task OpenDispatch(int id)
+    {
+        await SetView("Despacho");
+        await Select(id);
+    }
+
+    void OpenCreate()
+    {
+        title = "";
+        address = "";
+        description = "";
+        lat = 22.1565;
+        lng = -100.9855;
+        categoryName = store.State.Categories[0].Name;
+        CategoryChanged();
+        formError = null;
+        creating = true;
+    }
+
+    void CategoryChanged()
+    {
+        priority = store.State.Categories.First(c => c.Name == categoryName).Priority;
+    }
+
+    async Task Create()
+    {
+        try
+        {
+            var i = store.Create(title, categoryName, priority, address, description, lat, lng);
+            selectedId = i.Id;
+            unitId = "";
+            note = "";
+            creating = false;
+            await SetView("Despacho");
+            await Save();
+        }
+        catch (Exception ex)
+        {
+            formError = ex.Message;
+        }
+    }
+
+    async Task Assign()
+    {
+        await Change(() => store.Assign(selectedId, unitId));
+    }
+
+    async Task Advance(string next)
+    {
+        await Change(() => store.Advance(selectedId, next, note));
+    }
+
+    async Task AddNote()
+    {
+        await Change(() => store.Note(selectedId, note));
+    }
+
+    async Task Change(Action action)
+    {
+        try
+        {
+            action();
+            note = "";
+            await Save();
+            await RefreshMap();
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+        }
+    }
+
+    async Task Save()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("demoStorage.save", store.Serialize());
+            saveStatus = $"Guardado local · {DateTime.Now:HH:mm:ss}";
+        }
+        catch
+        {
+            saveStatus = "Cambios sin guardar";
+            message =
+                "No se pudo guardar en este equipo. Exporta un respaldo para conservar los cambios.";
+        }
+    }
+
+    async Task SaveCatalog()
+    {
+        await Save();
+        message = "Catálogo actualizado para los nuevos registros.";
+    }
+
+    async Task Export()
+    {
+        await JS.InvokeVoidAsync("demoStorage.export", store.Serialize());
+        message = "Respaldo JSON exportado.";
+    }
+
+    async Task Import(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var reader = new StreamReader(e.File.OpenReadStream(5 * 1024 * 1024));
+            var json = await reader.ReadToEndAsync();
+            store.Restore(json);
+            selectedId = store.State.Incidents.FirstOrDefault()?.Id ?? 0;
+            await Save();
+            message = "Respaldo restaurado correctamente.";
+        }
+        catch
+        {
+            message =
+                "No se importó el archivo. Usa un respaldo JSON válido de esta demo, de hasta 5 MB.";
+        }
+    }
+
+    async Task Reset()
+    {
+        store.Reset();
+        selectedId = 1003;
+        unitId = "";
+        note = "";
+        confirmReset = false;
+        await Save();
+        message = "Escenario de demostración reiniciado.";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (mapReady)
+                await JS.InvokeVoidAsync("demoMap.dispose");
+        }
+        catch (JSDisconnectedException) { }
+        callback?.Dispose();
+    }
+}
